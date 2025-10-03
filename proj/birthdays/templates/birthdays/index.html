@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8"/>
+    <title>Ближайший день рождения</title>
+    <style>
+        body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; padding: 2rem; }
+        .card { max-width: 520px; border: 1px solid #e5e7eb; border-radius: 12px; padding: 16px; }
+        .title { font-size: 18px; font-weight: 600; margin-bottom: 8px; }
+        .value { font-size: 16px; }
+        .muted { color: #6b7280; }
+    </style>
+    <script>
+        function render(data) {
+            const box = document.getElementById('data-box');
+            if (!data || !data.employee_name) {
+                box.innerHTML = '<div class="muted">Пока нет пользователей с датой рождения</div>';
+                return;
+            }
+            const birth = data.birth_date ? new Date(data.birth_date).toLocaleDateString() : '—';
+            const left = data.days_until === 0 ? 'сегодня' : `через ${data.days_until} д.`;
+            box.innerHTML = `<div class="value"><b>${data.employee_name}</b> — ${birth} (${left})</div>`;
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            const scheme = window.location.protocol === 'https:' ? 'wss' : 'ws';
+            const socketUrl = `${scheme}://${window.location.host}/ws/birthdays/`;
+            const socket = new WebSocket(socketUrl);
+
+            socket.onopen = () => {
+                document.getElementById('status').textContent = 'Подключено';
+            };
+            socket.onclose = () => {
+                document.getElementById('status').textContent = 'Отключено';
+            };
+            socket.onerror = () => {
+                document.getElementById('status').textContent = 'Ошибка соединения';
+            };
+            socket.onmessage = (event) => {
+                try {
+                    const payload = JSON.parse(event.data);
+                    if (payload && (payload.type === 'initial' || payload.type === 'update')) {
+                        render(payload.data);
+                    }
+                } catch (_) {}
+            };
+        });
+    </script>
+    </head>
+<body>
+    <div class="card">
+        <div class="title">Ближайший день рождения</div>
+        <div id="data-box" class="value muted">Загрузка...</div>
+        <div class="muted" style="margin-top:8px">Статус: <span id="status">Подключение...</span></div>
+    </div>
+</body>
+</html>
